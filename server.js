@@ -110,4 +110,4 @@ app.post('/api/messages',auth,wrap(req=>{const db=rd('database.json'),{room}=res
  if(!text)throw new Error('Pesan kosong');db.messages=db.messages||[];
  db.messages.push({id:nextId(db),room,from:req.user.username,text,at:Date.now()});if(db.messages.length>3000)db.messages=db.messages.slice(-3000);
  wr('database.json',db);return{ok:1}}));
-const PORT=process.env.SERVER_PORT||process.env.PORT||2033;app.listen(PORT,'0.0.0.0',()=>console.log('Jalan di port '+PORT));
+const PORT=process.env.SERVER_PORT||process.env.PORT||3000;app.listen(PORT,'0.0.0.0',()=>console.log('Jalan di port '+PORT));
