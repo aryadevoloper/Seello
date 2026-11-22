@@ -51,6 +51,10 @@ app.post('/api/create',auth,wrap(async req=>{
  if(!valid.test(name||''))throw new Error('Nama panel 3-20 huruf/angka/_');
  if(!password||password.length<6)throw new Error('Password panel min 6 karakter');
  if(adp&&req.user.role==='user')throw new Error('Admin Panel hanya untuk admin dan owner');
+ if(adp){await checkSv(sv);
+  const u=await pt(sv,'/users','POST',{email:name.toLowerCase()+'@panel.com',username:name,first_name:name,last_name:'User',password,root_admin:true});
+  const db=rd('database.json');db.panels.push({sid:sv.id,uid:u.attributes.id,server:sv.name,owner:req.user.username,name,adp:true,at:Date.now()});wr('database.json',db);
+  return{domain:sv.domain,username:name,password}}
  const gb=Number(ram);if(!(gb>=0&&gb<=100))throw new Error('RAM tidak valid');
  if(sv.eggs?.length&&!sv.eggs.some(x=>x.id===egg))throw new Error('Egg tidak tersedia');
  await checkSv(sv);const[n,e]=String(egg).split(':');
