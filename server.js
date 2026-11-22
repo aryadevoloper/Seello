@@ -67,7 +67,7 @@ app.post('/api/create',auth,wrap(async req=>{
   deploy:{locations:[+sv.location||1],dedicated_ip:false,port_range:[]}}).catch(async x=>{await pt(sv,'/users/'+u.attributes.id,'DELETE').catch(()=>{});throw x});
  const db=rd('database.json');db.panels.push({sid:sv.id,pid:sr.attributes.id,uid:u.attributes.id,server:sv.name,owner:req.user.username,name,ram:gb,cpu:Number(cpu)||0,adp:!!adp,egg,at:Date.now()});wr('database.json',db);
  return{domain:sv.domain,username:name,password}}));
-app.get('/api/panels',auth,wrap(r=>rd('database.json').panels.filter(p=>p.owner===r.user.username).reverse()));
+app.get('/api/panels',auth,wrap(r=>{const sv=rd('api.json').servers;return rd('database.json').panels.filter(p=>p.owner===r.user.username).reverse().map(p=>({...p,domain:(sv.find(x=>x.id===p.sid)||{}).domain||''}))}));
 const mine=(req,rec)=>{if(!rec)throw new Error('Panel tidak ditemukan');if(rec.owner!==req.user.username)throw new Error('Akses ditolak')};
 const findRec=(db,b)=>b.pid?db.panels.find(p=>p.pid==b.pid):db.panels.find(p=>!p.pid&&p.uid==b.uid);
 app.post('/api/panel/edit',auth,wrap(async req=>{const{ram,cpu,password}=req.body,db=rd('database.json'),rec=findRec(db,req.body);mine(req,rec);
