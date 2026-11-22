@@ -69,15 +69,22 @@ app.post('/api/create',auth,wrap(async req=>{
  return{domain:sv.domain,username:name,password}}));
 app.get('/api/panels',auth,wrap(r=>rd('database.json').panels.filter(p=>p.owner===r.user.username).reverse()));
 const mine=(req,rec)=>{if(!rec)throw new Error('Panel tidak ditemukan');if(rec.owner!==req.user.username)throw new Error('Akses ditolak')};
-app.post('/api/panel/edit',auth,wrap(async req=>{const{pid,ram,cpu}=req.body,db=rd('database.json'),rec=db.panels.find(p=>p.pid==pid);mine(req,rec);
- const gb=Number(ram);if(!(gb>=0&&gb<=100))throw new Error('RAM tidak valid');
- const sv=getSv(rec.sid),cur=(await pt(sv,'/servers/'+rec.pid)).attributes,mem=gb*1024;
- await pt(sv,`/servers/${rec.pid}/build`,'PATCH',{allocation:cur.allocation,memory:mem,swap:0,disk:mem,io:500,cpu:Number(cpu)||0,threads:null,feature_limits:cur.feature_limits});
- rec.ram=gb;rec.cpu=Number(cpu)||0;wr('database.json',db);return{ok:1}}));
-app.post('/api/panel/delete',auth,wrap(async req=>{const db=rd('database.json'),rec=db.panels.find(p=>p.pid==req.body.pid);mine(req,rec);
- const sv=getSv(rec.sid);await pt(sv,'/servers/'+rec.pid,'DELETE');
- if(rec.uid)await pt(sv,'/users/'+rec.uid,'DELETE').catch(()=>{});
- db.panels=db.panels.filter(p=>p!==rec&&p.pid!=rec.pid);wr('database.json',db);return{ok:1}}));
+const findRec=(db,b)=>b.pid?db.panels.find(p=>p.pid==b.pid):db.panels.find(p=>!p.pid&&p.uid==b.uid);
+app.post('/api/panel/edit',auth,wrap(async req=>{const{ram,cpu,password}=req.body,db=rd('database.json'),rec=findRec(db,req.body);mine(req,rec);
+ const sv=getSv(rec.sid),np=String(password||'');
+ if(np&&np.length<6)throw new Error('Password min 6 karakter');
+ if(rec.pid){const gb=Number(ram);if(!(gb>=0&&gb<=100))throw new Error('RAM tidak valid');
+  const cur=(await pt(sv,'/servers/'+rec.pid)).attributes,mem=gb*1024;
+  await pt(sv,`/servers/${rec.pid}/build`,'PATCH',{allocation:cur.allocation,memory:mem,swap:0,disk:mem,io:500,cpu:Number(cpu)||0,threads:null,feature_limits:cur.feature_limits});
+  rec.ram=gb;rec.cpu=Number(cpu)||0}
+ if(np){if(!rec.uid)throw new Error('Akun tidak ditemukan');
+  await pt(sv,'/users/'+rec.uid,'PATCH',{email:rec.name.toLowerCase()+'@panel.com',username:rec.name,first_name:rec.name,last_name:'User',language:'en',password:np,root_admin:!!rec.adp})}
+ wr('database.json',db);return{ok:1}}));
+app.post('/api/panel/delete',auth,wrap(async req=>{const db=rd('database.json'),rec=findRec(db,req.body);mine(req,rec);
+ const sv=getSv(rec.sid);
+ if(rec.pid){await pt(sv,'/servers/'+rec.pid,'DELETE');if(rec.uid)await pt(sv,'/users/'+rec.uid,'DELETE').catch(()=>{})}
+ else if(rec.uid)await pt(sv,'/users/'+rec.uid,'DELETE');
+ db.panels=db.panels.filter(p=>p!==rec);wr('database.json',db);return{ok:1}}));
 const mask=k=>k?'••••'+k.slice(-4):'';
 app.get('/api/settings',auth,only('owner'),wrap(()=>rd('api.json').servers.map(v=>({...v,plta:mask(v.plta),pltc:mask(v.pltc)}))));
 app.post('/api/settings',auth,only('owner'),wrap(req=>{const a=rd('api.json'),b=req.body;
