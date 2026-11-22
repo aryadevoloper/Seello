@@ -114,7 +114,7 @@ app.get('/api/users/search',auth,wrap(req=>{const q=String(req.query.q||'').toLo
 app.get('/api/chats',auth,wrap(req=>{const db=rd('database.json'),M=db.messages||[],me=req.user.username.toLowerCase();
  const last=r=>{const l=M.filter(m=>m.room===r).pop();return l?{text:l.text,at:l.at,from:l.from||'',name:l.from?dn(db,l.from):'',system:!!l.system}:{}};
  const rooms=[...new Set(M.filter(m=>m.room.startsWith('dm:')&&m.room.slice(3).split('|').includes(me)).map(m=>m.room))];
- const dms=rooms.map(r=>{const o=r.slice(3).split('|').find(x=>x!==me),u=db.users.find(x=>x.username.toLowerCase()===o);return u&&{username:u.username,name:u.name||u.username,...last(r)}}).filter(Boolean).sort((a,b)=>b.at-a.at);
+ const dms=rooms.map(r=>{const o=r.slice(3).split('|').find(x=>x!==me),u=db.users.find(x=>x.username.toLowerCase()===o);return u&&{...last(r),username:u.username,name:u.name||u.username}}).filter(Boolean).sort((a,b)=>b.at-a.at);
  return{global:last('global'),dms}}));
 app.get('/api/messages',auth,wrap(req=>{const db=rd('database.json'),{room,peer}=resolveRoom(req,db,req.query),after=+req.query.after||0;
  const list=(db.messages||[]).filter(m=>m.room===room&&m.id>after).slice(-100);
